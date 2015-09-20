@@ -1,0 +1,209 @@
+<!--
+@license
+Copyright (c) 2015 The Polymer Project Authors. All rights reserved.
+This code may only be used under the BSD style license found at http://polymer.github.io/LICENSE.txt
+The complete set of authors may be found at http://polymer.github.io/AUTHORS.txt
+The complete set of contributors may be found at http://polymer.github.io/CONTRIBUTORS.txt
+Code distributed by Google as part of the polymer project is also
+subject to an additional IP rights grant found at http://polymer.github.io/PATENTS.txt
+-->
+
+<link rel="import" href="../../bower_components/polymer/polymer.html">
+
+<dom-module id="carpooling-form">
+  <style>
+    :host {
+      display: block;
+    }
+    #form {
+      padding: 20px;
+    }
+    #form #buttonContainer {
+      text-align: center;
+    }
+    #form ::content paper-button {
+      margin: 8px 5px;
+      display: inline-block;
+      -webkit-font-smoothing: antialiased;
+    }
+    #form ::content button {
+      display: inline-block;
+    }
+    #form ::content #addStop {
+      background: var(--default-primary-color, #3F51B5);
+      color: #fff;
+    }
+  </style>
+  <template>
+    <div id="form">
+      <paper-input name="start" label="Start" required on-focusout="search"></paper-input>
+      <paper-input name="stop" label="Destination" on-focusout="search"></paper-input>
+      <div id="buttonContainer">
+        <template is="dom-if" if="{{!submitted}}">
+          <paper-button raised id="addStop" on-click="addStop">Add Person</paper-button>
+          <button type="submit" is="paper-button-submit" on-click="go"></button>
+        </template>
+        <template is="dom-if" if="{{submitted}}">
+          <paper-button raised id="newSearch" on-click="reload">New Search</paper-button>
+        </template>
+      </div>
+    </div>
+    <google-map-search id="search" map="{{map}}" query="{{query}}" result="{{result}}"></google-map-search>
+    <iron-ajax id="ajax"
+      url="http://gregmkerr.com:5000/routing/jobs"
+      handle-as="json"
+      body="{{data}}"
+      method="POST"
+      content-type="application/json"
+      on-response="handleResponse"></iron-ajax>
+  </template>
+</dom-module>
+<script>
+(function() {
+  Polymer({
+    is: 'carpooling-form',
+    properties: {
+      data: {
+        type: Object,
+        value: {
+          'vehicles': {},
+          'stops': {}
+        }
+      },
+      submitted: {
+        type: Boolean,
+        value: false
+      }
+    },
+    search: function(e) {
+      app.search(e);
+    },
+    go: function() {
+      var positions = this.getElementsByTagName('paper-input');
+      var stop = positions.stop;
+
+      var data = {
+        'vehicles': {},
+        'stops': {}
+      };
+
+      var splicedPos = [].slice.call(positions);
+      // remove stop from array if it wasn't included
+      if (!stop.value) {
+        splicedPos.splice(1,1);
+      }
+      // Construct object that will be sent to server as sample data in this form:
+      // data = {
+      //   vehincles: {
+      //     vehicleA: {
+      //       origin: 'stop_0',
+      //       destination: 'stop_1'
+      //     }
+      //   },
+      //   stops: {
+      //     stop_0: {
+      //       lat: latitude,
+      //       long: longitude
+      //       dependencies: dep
+      //     }
+      //   }
+      // }
+      for (var i = 0; i < splicedPos.length; i++) {
+        var dep;
+        if (splicedPos[i].name === 'dropoff') {
+          dep = ['stop_' + (i-1)];
+        } else {
+          dep = [];
+        }
+
+        data.stops['stop_' + i] = {
+          lat: splicedPos[i].lat,
+          long: splicedPos[i].long,
+          dependencies: dep
+        };
+      }
+
+      data.vehicles = {
+        vehicleA: {
+          origin: 'stop_0',
+          destination: 'stop_1'
+        }
+      };
+
+      this.data = JSON.stringify(data);
+      console.log(this.data);
+      var ajax = this.$.ajax;
+
+      ajax.generateRequest();
+    },
+
+    handleResponse: function(ele, response) {
+      console.log(response);
+      try {
+        // parse reponse from server
+        this.processRes(response.parseResponse().result);
+        // clear previous results and markers from map
+        document.querySelector('google-map').clear();
+        this.submitted = true;
+        this.disableInputs();
+        // fire change events for map element to update values
+        this.fire('start-changed', this.start);
+        this.fire('end-changed', this.end);
+        this.fire('waypoints-changed', this.waypoints);
+        document.querySelector('google-map-directions')._mapChanged();
+      } catch (e) {
+          window.alert('Error, please try again!');
+      }
+    },
+
+    processRes: function(response) {
+      var stops = response.vehicleA;
+      this.waypoints = [];
+      this.start = stops[0].lat + ',' + stops[0].long;
+      this.end = stops[stops.length-1].lat + ',' + stops[stops.length-1].long;
+      for (var i = 1; i < stops.length - 1; i++) {
+        this.waypoints.push({
+          location: stops[i].lat + ',' + stops[i].long,
+        });
+      }
+    },
+
+    addStop: function() {
+      var el = document.createElement('carpooling-stop');
+      var parent = document.getElementById('form');
+      var btnCtn = document.getElementById('buttonContainer');
+      parent.insertBefore(el, btnCtn);
+    },
+
+    reload: function() {
+      this.submitted = false;
+      document.querySelector('google-map-directions').directionsRenderer.setMap(null);
+      // this.removeCarpoolingStops();
+      this.enableInputs();
+      // this.addStop();
+    },
+    enableInputs: function() {
+      [].slice.call(document.querySelectorAll('paper-input')).forEach(function(e) {
+        Polymer.dom(e).removeAttribute('disabled');
+        app.createMarker(e.title, e.lat, e.long, e.name);
+      });
+      [].slice.call(document.querySelectorAll('paper-icon-button')).forEach(function(f) {
+        f.hidden = false;
+      });
+    },
+    disableInputs: function() {
+      [].slice.call(document.querySelectorAll('paper-input')).forEach(function(e) {
+        Polymer.dom(e).setAttribute('disabled', true);
+      });
+      [].slice.call(document.querySelectorAll('paper-icon-button')).forEach(function(f) {
+        f.hidden = true;
+      });
+    },
+    removeCarpoolingStops: function() {
+      [].slice.call(document.querySelectorAll('carpooling-stop')).forEach(function(e) {
+        e.remove();
+      });
+    }
+  });
+})();
+</script>
