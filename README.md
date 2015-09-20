@@ -3,7 +3,7 @@
 This is a sample project created to showcase Godel, the Optimization as a Service platform. Here a carpooling app generates data through this Polymer based web app. This data is then sent to our backend which then solves said problem and returns the optimal solution.
 
 Check out the live demo here:
-[Godel Carpooling Demo](demo.godel.io)
+[Godel Carpooling Demo](http://demo.godel.io)
 
 ## Polymer:
 [Polymer docs](https://www.polymer-project.org/1.0/) can be found here.
