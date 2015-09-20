@@ -1,7 +1,12 @@
 # Godel Carpooling Demo
 
-This is a sample project created to showcase Godel, the Optimization as a Service platform. Here problem requests are made from a Polymer based web app to the backend which then solves said problem and returns the optimal solution.
+This is a sample project created to showcase Godel, the Optimization as a Service platform. Here a carpooling app generates data through this Polymer based web app. This data is then sent to our backend which then solves said problem and returns the optimal solution.
 
+Check out the live demo here:
+[Godel Carpooling Demo](demo.godel.io)
+
+## Polymer:
+[Polymer docs](https://www.polymer-project.org/1.0/) can be found here.
 
 ## Based on Polymer Starter Kit
 [Polmer Starter Kit](https://github.com/polymerelements/polymer-starter-kit/releases/latest) can be found here.
@@ -15,15 +20,14 @@ npm install -g gulp bower && npm install && bower install
 ### Development workflow
 
 #### Serve / watch
-
+To run app locally:
 ```sh
 gulp serve
 ```
 
 #### Build & Vulcanize
-
+To prepare app for deployment:
 ```sh
 gulp
 ```
-
-Build and optimize the current project, ready for deployment. This includes linting as well as vulcanization, image, script, stylesheet and HTML optimization and minification.
+This will build and optimize the current project. This includes linting as well as vulcanization, image, script, stylesheet and HTML optimization and minification.
